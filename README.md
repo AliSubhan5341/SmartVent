@@ -43,8 +43,8 @@ This project uses minimal yet powerful hardware to achieve real-time sensing and
 |-----------|---------------------|
 | VIN       | 3.3V (or 5V*)        |
 | GND       | GND                 |
-| SDA       | GPIO 21             |
-| SCL       | GPIO 22             |
+| SDA       | GPIO 41             |
+| SCL       | GPIO 42             |
 
 > ⚠️ *Use 5V if available and compatible; SCD30 works more reliably at 5V even though logic is I²C safe.
 
