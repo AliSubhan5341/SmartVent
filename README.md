@@ -21,3 +21,33 @@ To address these concerns, the system integrates the following features:
 
 In summary, this system serves as a low-power, intelligent solution for maintaining healthy indoor air quality. It combines environmental sensing, predictive algorithms, and actuator control to create a feedback loop that optimizes air quality while minimizing unnecessary energy usage.
 
+## 2. Hardware Requirements and Setup
+
+This project uses minimal yet powerful hardware to achieve real-time sensing and control with low power consumption.
+
+### 🔧 Hardware Components
+
+| Component       | Description |
+|----------------|-------------|
+| **Heltec ESP32 V3** | Main microcontroller with built-in Wi-Fi and support for deep sleep; compact, reliable, and power-efficient. |
+| **Adafruit SCD30 Sensor** | High-accuracy CO₂, temperature, and humidity sensor with I²C communication; ideal for indoor air quality monitoring. |
+
+### 🔌 Why These Components?
+
+- **Heltec ESP32 V3** supports deep sleep, making it perfect for battery-optimized IoT applications. It also provides built-in USB for programming and debugging.
+- **SCD30** provides reliable and precise environmental readings. Its onboard calibration and compensation features improve data quality without extra components.
+
+### 🧰 Wiring Connections
+
+| SCD30 Pin | Heltec ESP32 V3 Pin |
+|-----------|---------------------|
+| VIN       | 3.3V (or 5V*)        |
+| GND       | GND                 |
+| SDA       | GPIO 21             |
+| SCL       | GPIO 22             |
+
+> ⚠️ *Use 5V if available and compatible; SCD30 works more reliably at 5V even though logic is I²C safe.
+
+### 📷 Hardware Setup Diagram
+
+![Hardware Setup](hardware-setup.png)
