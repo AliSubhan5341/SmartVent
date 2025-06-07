@@ -97,6 +97,7 @@ To be defined in code or a `config.h` file:
 #define MQTT_SERVER     "broker.example.com"
 #define MQTT_PORT       1883
 #define MQTT_TOPIC      "your/topic"
+```
 
 ## 4. Functional Requirements
 
