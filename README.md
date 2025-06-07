@@ -51,3 +51,53 @@ This project uses minimal yet powerful hardware to achieve real-time sensing and
 ### 📷 Hardware Setup Diagram
 
 ![Hardware Setup](hardware_setup.png)
+
+## 3. System Requirements
+
+This section outlines both the setup dependencies and the implementation-level requirements for the system to function as designed.
+
+---
+
+### 📦 A. System Setup Requirements
+
+#### 🔧 Hardware Components
+
+| Component               | Purpose                                                     |
+|------------------------|--------------------------------------------------------------|
+| **Heltec ESP32 V3**     | Main microcontroller for computation, sleep, and Wi-Fi       |
+| **Adafruit SCD30 Sensor** | Reads CO₂, temperature, and humidity via I²C                 |
+| **Connecting Wires**    | Enables I²C communication between ESP32 and SCD30            |
+| **Power Supply**        | USB or battery (deep sleep supported for power efficiency)   |
+| **Optional Fan/Relay**  | For triggering ventilation or cooling systems                |
+
+#### 💻 Software Dependencies
+
+- Arduino IDE or PlatformIO
+- ESP32 Board Support via Espressif package
+- Required Arduino libraries:
+  - `Adafruit_SCD30`
+  - `WiFi.h`
+  - `PubSubClient`
+  - `InfluxDbClient`, `InfluxDbCloud`
+  - `Wire.h`
+  - `time.h`
+
+#### 🌐 Cloud & Network Services
+
+- Active Wi-Fi connection for MQTT, NTP, and InfluxDB
+- MQTT Broker (e.g., `test.mosquitto.org` or local instance)
+- InfluxDB 2.0+ server (cloud or local)
+
+#### 🔐 Required Credentials
+
+To be defined in code or a `config.h` file:
+```cpp
+#define WIFI_SSID       "YourSSID"
+#define WIFI_PASSWORD   "YourPassword"
+#define INFLUXDB_URL    "https://your-influxdb-url"
+#define INFLUXDB_TOKEN  "your-token"
+#define INFLUXDB_ORG    "your-org"
+#define INFLUXDB_BUCKET "your-bucket"
+#define MQTT_SERVER     "broker.example.com"
+#define MQTT_PORT       1883
+#define MQTT_TOPIC      "your/topic"
