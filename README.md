@@ -56,8 +56,6 @@ This project uses minimal yet powerful hardware to achieve real-time sensing and
 
 This section outlines both the setup dependencies and the implementation-level requirements for the system to function as designed.
 
----
-
 ### 📦 A. System Setup Requirements
 
 #### 🔧 Hardware Components
