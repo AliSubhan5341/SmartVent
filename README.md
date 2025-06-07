@@ -50,4 +50,4 @@ This project uses minimal yet powerful hardware to achieve real-time sensing and
 
 ### 📷 Hardware Setup Diagram
 
-![Hardware Setup](hardware-setup.png)
+![Hardware Setup](hardware_setup.png)
