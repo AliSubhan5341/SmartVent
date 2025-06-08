@@ -186,3 +186,18 @@ Each wake cycle performs the following steps:
 ---
 
 This approach allows the system to operate autonomously, forecast intelligently, and publish meaningful insights with minimal power consumption — ready for real-world deployment with actuators when needed.
+
+## 6. Classroom Testing
+
+To validate system performance in a real-world scenario, we deployed the ESP32 monitor in a classroom and collected CO₂ (ppm) and temperature (°C) readings over a school day. The graph below shows how concentrations and ambient temperature evolved, with class periods (12:00–14:00 and 15:00–17:00) shaded in gray.
+
+![CO₂ and Temperature Readings (with Class Periods Shaded)](trends.png)
+
+**Observations:**
+- **Morning (11:00–12:00):** CO₂ remains low (~580–630 ppm) before students arrive; temperature gradually rises from ~27.5 °C to ~28.5 °C.
+- **First Class (12:00–14:00):** CO₂ spikes above 1200 ppm, indicating high occupancy and limited ventilation; temperature continues rising up to ~30 °C.
+- **Break (14:00–15:00):** CO₂ drops back towards ~630 ppm as students leave; temperature peaks around 30.2 °C then stabilizes.
+- **Second Class (15:00–17:00):** CO₂ again climbs above 1100 ppm; temperature slowly declines from ~30.5 °C to ~28.5 °C, reflecting HVAC or window adjustments.
+- **End of Day (17:00–18:00):** CO₂ and temperature both decrease towards baseline.
+
+This test demonstrates the system’s ability to track rapid changes in air quality during occupied periods, providing both real-time data and context for proactive ventilation control.
