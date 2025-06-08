@@ -265,3 +265,68 @@ Although **no physical fan or AC unit is connected** in this prototype, the syst
 ---
 
 This predictive control architecture makes the system not only reactive to poor conditions, but also **proactively intelligent** — a crucial requirement for smart building systems or energy-aware classrooms.
+
+## 8. Dynamic Deep-Sleep Logic
+The heart of our power-management strategy is an adaptive deep-sleep interval that adjusts itself based on how quickly CO₂ is rising (or falling). Instead of a fixed sleep time, we look at the rate of change (slope) and a user-defined “drift budget” to compute exactly how long we can sleep before air quality could cross our comfort threshold.
+
+### 📐 How It Works
+**Measure & Slope Calculation**
+On each wake, record the current CO₂ (co2_i) and timestamp (now), then compute the elapsed minutes and the per-minute slope:
+
+```cpp
+float dt    = (now - lastEpoch) / 60.0f;       // minutes since last wake  
+float dCo2  = (co2_i - lastCo2) / dt;          // ppm per minute  
+float dTemp = (temp_i - lastTemp) / dt;       // °C per minute
+```
+
+**Drift Budget & Formula**
+Define a maximum allowable drift in CO₂ (e.g. **50** ppm) before the next sample.
+The ideal sleep interval (minutes) is then:
+
+```cpp
+nextSleepMin = DRIFT_PPM / (fabs(dCo2) + EPSILON);
+```
+and clamped between 0.5 min and 15 min.
+
+Putting It All Together
+
+```cpp
+float nextSleepMin = computeNextSleep(dCo2);   // uses DRIFT_PPM=50, MAX_SLEEP_MIN=15
+Serial.printf("[Sleep] Next wake in %.2f min\n", nextSleepMin);
+storeState(co2_i, temp_i, now);                // save for next wake
+esp_deep_sleep(uint64_t(nextSleepMin * 60e6));
+```
+
+### ⚡ Benefits
+**Battery Optimized**
+
+1. Slow CO₂ rise → longer sleeps (up to 15 min).
+
+2. Rapid rise → more frequent wakes.
+
+3. Responsiveness
+
+Guarantees the next sample occurs just before CO₂ can drift beyond your budget.
+
+Self-Tuning
+
+No hard-coded intervals — adapts to real-world room dynamics automatically.
+
+Function Reference
+cpp
+Copy
+Edit
+float computeNextSleep(float dCo2) {
+  if (lastEpoch == 0) 
+    return 1.0f;  // first wake → default 1 min
+
+  float next = DRIFT_PPM / (fabs(dCo2) + EPSILON);
+  return constrain(next, MIN_SLEEP_MIN, MAX_SLEEP_MIN);
+}
+DRIFT_PPM: allowable CO₂ drift in ppm (default 50).
+
+EPSILON: small constant (0.01) to prevent divide-by-zero.
+
+MIN_SLEEP_MIN / MAX_SLEEP_MIN: clamp range (0.5 min → 15 min).
+
+With this in place, your ESP32 only wakes as often as needed to maintain air quality—maximizing battery life without sacrificing comfort.
