@@ -201,3 +201,67 @@ To validate system performance in a real-world scenario, we deployed the ESP32 m
 - **End of Day (17:00–18:00):** CO₂ and temperature both decrease towards baseline.
 
 This test demonstrates the system’s ability to track rapid changes in air quality during occupied periods, providing both real-time data and context for proactive ventilation control.
+
+## 7. Pre-emptive Actuator Control
+
+One of the core features of this system is its ability to perform **pre-emptive actuation** — deciding whether to turn on ventilation or cooling *before* air quality becomes uncomfortable. This is accomplished by predicting CO₂ and temperature levels 2 minutes into the future using **Holt’s double exponential smoothing**, rather than waiting for thresholds to be crossed in real time.
+
+Although **no physical fan or AC unit is connected** in this prototype, the system simulates actuator decisions based on forecasted values, and logs those decisions for analysis or future integration.
+
+### 🔍 How It Works
+
+1. **Forecasting CO₂ and Temperature**
+   - After each sensor reading, the system applies Holt's smoothing to estimate:
+     - `L` (level): smoothed current value
+     - `T` (trend): estimated rate of change per minute
+   - It then predicts the values `LOOKAHEAD_MIN` (e.g. 2 minutes) into the future:
+     ```cpp
+     co2_pred  = L_co2 + T_co2 * LOOKAHEAD_MIN;
+     temp_pred = L_temp + T_temp * LOOKAHEAD_MIN;
+     ```
+
+2. **Defining Pre-emptive Triggers**
+   - If the **forecasted** CO₂ is ≥ 1000 ppm → preemptively ventilate
+   - If the **forecasted** temperature is ≥ 26 °C → preemptively cool
+   - These are captured as Boolean flags:
+     ```cpp
+     bool preemptVent = (co2_pred >= 1000.0f);
+     bool preemptCool = (temp_pred >= 26.0f);
+     ```
+
+3. **Decision Logic with State Tracking**
+   - The system keeps track of whether the fan or cooler **was ON** in the last cycle using `RTC_DATA_ATTR` variables (which persist across deep sleep).
+   - Based on preemptive triggers and real-time values, it determines:
+     - Whether to **turn ON**, **turn OFF**, or make **no change**
+   - Example:
+     ```cpp
+     if (preemptVent || co2_i > 1000.0f) fanNow = true;
+     if (fanNow && !fanWasOn) fanAct = "TURNED_ON";
+     else if (!fanNow && fanWasOn) fanAct = "TURNED_OFF";
+     ```
+
+4. **Simulation & Publishing**
+   - Since this project does not connect physical actuators, the decisions are:
+     - Published as part of an MQTT JSON payload
+     - Logged to InfluxDB for later review
+   - Example MQTT payload:
+     ```json
+     {
+       "co2": 1120.5,
+       "temp": 28.4,
+       "fan": "TURNED_ON",
+       "cooling": "NO_CHANGE",
+       "preemptVent": true,
+       "preemptCool": false
+     }
+     ```
+
+### ✅ Why Pre-emptive Control?
+
+- **Foresight Over Reaction**: By acting before thresholds are reached, the system avoids unnecessary discomfort or health risks.
+- **Power Efficiency**: Relays or fans can run for shorter periods by starting just in time rather than running late and longer.
+- **Scalability**: The same logic can be extended to real-world hardware with minimal changes — just assign `fanNow` and `coolingNow` to GPIO pins.
+
+---
+
+This predictive control architecture makes the system not only reactive to poor conditions, but also **proactively intelligent** — a crucial requirement for smart building systems or energy-aware classrooms.
