@@ -50,7 +50,7 @@ This project uses minimal yet powerful hardware to achieve real-time sensing and
 
 ### 📷 Hardware Setup Diagram
 
-![Hardware Setup](hardware_setup.png)
+![Hardware Setup](Hardware_Setup.png)
 
 ## 3. System Requirements
 
@@ -117,3 +117,72 @@ This system is designed to intelligently monitor and respond to indoor air quali
 | **InfluxDB Logging**              | Log all readings, slopes, and actuator states to an InfluxDB 2.x instance for long-term analysis and visualization. |
 | **Adaptive Sleep Duration**       | Dynamically adjust deep sleep interval based on CO₂ slope and a predefined drift tolerance to balance accuracy with energy savings. |
 | **Fallback Handling**             | Enter a safe default sleep mode when sensor readings fail or valid time isn't available to avoid system crash. |
+
+## 5. How the Code Works
+
+This system follows a structured and power-efficient duty cycle that repeats every time the ESP32 wakes up from deep sleep. The primary purpose is to measure indoor air quality, predict future conditions, and determine whether to simulate actuation (ventilation or cooling) based on those predictions. No physical actuators are connected — all control decisions are logged and published for analysis.
+
+### 🕓 Duty Cycle Overview
+
+Each wake cycle performs the following steps:
+
+1. **Startup & Power Optimization**
+   - Serial is initialized for logging.
+   - CPU frequency is lowered and Bluetooth is disabled to save power.
+
+2. **Network Connection**
+   - Connects to Wi-Fi and MQTT broker.
+   - On first boot only, performs an NTP time sync to establish valid system time.
+
+3. **Sensor Reading (SCD30)**
+   - The SCD30 sensor is initialized.
+   - A **dual-read technique** is used: the first valid reading is discarded, and the second is accepted to ensure stability.
+   - CO₂, temperature, and humidity values are stored.
+
+4. **Empty Room Detection**
+   - If CO₂ < 500 ppm, the room is assumed to be unoccupied.
+   - The system enters a long deep sleep (e.g., 20 minutes) to conserve power.
+
+5. **Time & Trend Calculation**
+   - The current time is compared with the last recorded time to compute `Δt` (minutes since last wake).
+   - Using the current and last CO₂/temperature values, the system calculates slopes (rate of change per minute).
+
+6. **Holt’s Forecasting**
+   - Applies Holt’s double exponential smoothing to update internal level and trend estimates for both CO₂ and temperature.
+   - Predicts values `2 minutes` into the future.
+
+7. **Decision Logic (Virtual Actuation)**
+   - Based on forecasted values:
+     - If predicted CO₂ ≥ 1000 ppm → simulate turning **fan ON**
+     - If predicted temperature ≥ 26°C → simulate turning **cooling ON**
+   - These actions are **not physically executed** but are tracked in flags and published for observation.
+
+8. **Data Publishing**
+   - A structured payload is published over MQTT, containing:
+     - Current readings
+     - Slopes
+     - Forecasts
+     - Simulated fan/cooling actions
+   - The same data is also logged to InfluxDB for visualization and analysis.
+
+9. **Dynamic Deep Sleep Calculation**
+   - Using a user-defined `DRIFT_PPM` value (e.g., 50 ppm), the system calculates how long it can sleep before a significant change in CO₂ might occur.
+   - Sleep duration is bounded between 30 seconds and 15 minutes.
+
+10. **State Persistence**
+    - All relevant state variables (last readings, smoothing parameters, time) are stored in RTC memory to persist across sleep cycles.
+
+11. **Deep Sleep**
+    - The ESP32 enters deep sleep for the computed duration, cutting power usage to minimal levels.
+
+---
+
+### 🧪 Simulation Mode
+
+- No fans or cooling systems are physically connected.
+- Actuator decisions are **logged and published** purely for visualization or future expansion.
+- Ideal for testing forecasting logic and system behavior in a virtualized or lab environment.
+
+---
+
+This approach allows the system to operate autonomously, forecast intelligently, and publish meaningful insights with minimal power consumption — ready for real-world deployment with actuators when needed.
