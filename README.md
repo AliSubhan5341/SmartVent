@@ -336,7 +336,7 @@ This mechanism allows the ESP32 to behave like an **event-driven smart sensor**,
 
 This **self-adjusting deep sleep** allows the ESP32 to act like a **smart, event-driven sensor** — only waking more often when needed, and conserving energy when the environment is stable.
 
-## 10. Power Consumption Analysis
+## 9. Power Consumption Analysis
 
 The system’s power consumption was measured using an **INA219 current sensor** connected to a second ESP32, recording the current draw during a full operating cycle. The following plot shows the result:
 
