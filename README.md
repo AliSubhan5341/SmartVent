@@ -276,19 +276,50 @@ This project uses a **dynamic deep sleep strategy** to optimize power consumptio
 
 ### How It Works
 
-After each sensor read & control decision, the ESP32 calculates how long it can safely sleep before the next reading is needed:
+After each sensor read & control decision, the ESP32 calculates how long it can safely sleep before the next reading is needed.
 
-- The key idea is to **adapt the sleep interval based on the current trend of CO₂** (ppm/min), using this formula:
-  `next_sleep = DRIFT_PPM / ( |dCO₂/dt| + EPSILON )`
+#### Adaptive Sleep Based on CO₂ Trend
 
-- Where:
-- `DRIFT_PPM` = 50 ppm → allowed CO₂ change before next wake
-- `dCO₂/dt`   → estimated CO₂ slope (ppm/min) computed via Holt’s smoothing
-- `EPSILON`   → small constant to prevent division by zero
+The sleep interval is **adaptively adjusted** based on the current CO₂ trend:
 
-- This interval is then clipped between:
-- `MIN_SLEEP_MIN` = 0.5 min (30 s minimum sleep)
-- `MAX_SLEEP_MIN` = 15 min (maximum sleep cap)
+\[
+\texttt{next_sleep} = \frac{\texttt{DRIFT_PPM}}{|\frac{d\text{CO}_2}{dt}| + \texttt{EPSILON}}
+\]
+
+*If LaTeX rendering is not supported, here is the formula in plain text:*
+
+`next_sleep = DRIFT_PPM / ( |dCO₂/dt| + EPSILON )`
+
+#### Parameters
+
+- **DRIFT_PPM** = 50 ppm → allowed CO₂ change before next wake
+- **dCO₂/dt** → estimated CO₂ slope (ppm/min) computed via Holt’s smoothing
+- **EPSILON** → small constant to prevent division by zero
+
+#### Sleep Constraints
+
+The computed sleep time is clipped between:
+
+- **MIN_SLEEP_MIN** = 0.5 min → 30 s minimum sleep
+- **MAX_SLEEP_MIN** = 15 min → maximum sleep cap
+
+#### Behavior
+
+- If the room is **empty** (CO₂ < 500 ppm), a fixed sleep of 20 min is used.
+- On first boot (no prior state), sleep defaults to 1 min.
+- If the sensor read fails, a fallback sleep of 120 s is used.
+
+### Benefits
+
+✅ Automatically adapts sleep rate to environmental changes  
+✅ Minimizes power consumption during stable periods  
+✅ Increases responsiveness when CO₂ is rising rapidly  
+✅ Requires no manual tuning — Holt’s smoothing handles noise
+
+---
+
+This mechanism allows the ESP32 to behave like an **event-driven smart sensor**, balancing accuracy and energy efficiency.
+
 
 ### Special Cases
 
