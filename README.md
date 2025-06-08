@@ -336,4 +336,110 @@ This mechanism allows the ESP32 to behave like an **event-driven smart sensor**,
 
 This **self-adjusting deep sleep** allows the ESP32 to act like a **smart, event-driven sensor** — only waking more often when needed, and conserving energy when the environment is stable.
 
+## 10. Power Consumption Analysis
+
+The system’s power consumption was measured using an **INA219 current sensor** connected to a second ESP32, recording the current draw during a full operating cycle. The following plot shows the result:
+
+![Power Consumption — MQTT + Influx Touching Deep Sleep](power.jpg)
+
+### Phase-by-Phase Explanation
+
+The graph shows the **power profile of one complete cycle**, from wake to deep sleep. The phases are color-coded and labeled:
+
+### 🟦 1. WiFi + NTP (0–2.5 s)
+
+- **Initial wake from deep sleep** → ESP32 starts at reduced CPU clock (80 MHz).
+- **WiFi STA starts** → initial power ~400–500 mW.
+- **WiFi association + DHCP** causes the first large spikes → up to **~1000 mW**.
+- **NTP sync** is performed on first boot → adds further spikes (~1–2 s window).
+- Once WiFi connects and NTP is done → power settles ~500–600 mW.
+
+### 🟩 2. First Reading (2.5–5 s)
+
+- **SCD30 sensor started** → I²C active.
+- The ESP32 **polls dataReady()** and triggers the first read.
+- First valid reading is **discarded** (sensor warming phase).
+- Peaks ~800–900 mW occur during sensor read and I²C traffic.
+- Slight oscillations visible → waiting for stable first read.
+
+### 🟥 3. Second Reading (5–7.5 s)
+
+- Second polling phase → this time, the reading is **accepted**.
+- Power pattern similar to first read but more stable.
+- Peaks ~800–900 mW again during I²C read.
+- This phase ensures valid CO₂, temp, and humidity values.
+
+### 🟧 4. Third Reading (7.5–10 s)
+
+- Optional third reading → for confirmation or retries.
+- Similar behavior to second read → ~400–900 mW.
+- This phase ensures the **data fed to Holt’s smoothing** is stable.
+
+### 🟪 5. MQTT + Influx (10–15 s)
+
+- **WiFi remains ON** during this phase → baseline ~500 mW.
+- **MQTT.connect()** → brief spike when broker connection established.
+- **MQTT.publish()** → lightweight → ~600–700 mW peak.
+- **Influx.writePoint()** → dominant contributor:
+  - TLS handshake → multiple sharp peaks.
+  - HTTPS POST → ~1000 mW spikes.
+  - Influx write takes **~3–5 seconds** due to:
+    - TLS connection setup (cold start every cycle).
+    - HTTPS POST and response wait.
+- Dense repeated peaks here correspond to:
+  - TCP retransmissions
+  - TLS fragment exchange
+  - Certificate validation
+
+### ⬛ 6. Deep Sleep (>15 s)
+
+- After Influx write → ESP32 calls `esp_deep_sleep()`.
+- Power drops sharply → baseline ~200 mW (depends on board leakage + INA219 offset).
+- Very flat line indicates **successful deep sleep**:
+  - WiFi off
+  - SCD30 off
+  - CPU halted
+  - Only RTC domain running
+
+---
+
+### Observed Trends and Insights
+
+- **Most power is spent in the purple region (MQTT + Influx)**:
+  - InfluxDB write dominates time and power → due to full TLS handshake on each wake.
+  - If Influx used persistent connection → write time would drop < 1 s.
+- **Sensor reading is relatively efficient** (~3–5 s window).
+- **WiFi association + NTP is variable** → largest spikes happen here.
+- **Deep sleep is very clean** → ~200 mW baseline confirms successful optimization:
+  - `setCpuFrequencyMhz(80)`
+  - `btStop()`
+  - Proper sleep entry.
+
+### Summary Table
+
+| Phase                | Time Range (s) | Typical Power (mW) | Comments                            |
+|----------------------|----------------|-------------------|-------------------------------------|
+| WiFi + NTP           | 0–2.5          | 400–1000          | WiFi connect, NTP sync               |
+| First Reading        | 2.5–5          | 400–900           | SCD30 I²C polling, first read        |
+| Second Reading       | 5–7.5          | 400–900           | SCD30 valid read                     |
+| Third Reading        | 7.5–10         | 400–900           | Optional third read / retries        |
+| MQTT + Influx        | 10–15          | 500–1000          | MQTT fast, Influx TLS is heavy phase |
+| Deep Sleep           | >15            | ~200              | Very low-power idle                  |
+
+---
+
+### Final Notes
+
+- The system demonstrates an **event-driven power profile** with adaptive deep sleep.
+- The largest optimization opportunity is in the **InfluxDB write phase**:
+  - Possible approaches:
+    - Use Influx batch writes → less TLS overhead.
+    - Skip Influx on low-priority cycles.
+    - Use UDP if reliability can be traded for speed.
+- Overall → the ESP32 performs very well and the deep sleep cycle behaves exactly as designed.
+
+---
+
+👉 This graph validates the system's **power efficiency design** and shows that the dynamic deep sleep logic allows the ESP32 to operate in a very **energy-conscious** manner while maintaining accurate air quality reporting.
+
 
