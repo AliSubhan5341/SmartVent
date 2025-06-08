@@ -282,12 +282,6 @@ After each sensor read & control decision, the ESP32 calculates how long it can 
 
 The sleep interval is **adaptively adjusted** based on the current CO₂ trend:
 
-\[
-\texttt{next_sleep} = \frac{\texttt{DRIFT_PPM}}{|\frac{d\text{CO}_2}{dt}| + \texttt{EPSILON}}
-\]
-
-*If LaTeX rendering is not supported, here is the formula in plain text:*
-
 `next_sleep = DRIFT_PPM / ( |dCO₂/dt| + EPSILON )`
 
 #### Parameters
@@ -308,13 +302,6 @@ The computed sleep time is clipped between:
 - If the room is **empty** (CO₂ < 500 ppm), a fixed sleep of 20 min is used.
 - On first boot (no prior state), sleep defaults to 1 min.
 - If the sensor read fails, a fallback sleep of 120 s is used.
-
-### Benefits
-
-✅ Automatically adapts sleep rate to environmental changes  
-✅ Minimizes power consumption during stable periods  
-✅ Increases responsiveness when CO₂ is rising rapidly  
-✅ Requires no manual tuning — Holt’s smoothing handles noise
 
 ---
 
